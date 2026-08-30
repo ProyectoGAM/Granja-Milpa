@@ -88,6 +88,16 @@ git commit -m "feat: add feature"
 git push
 ```
 
+### Datos de prueba locales
+
+Con `APP_ENV=local`, el backend carga datos ficticios coherentes mediante sus seeders para facilitar las pruebas. Para reconstruir la base local:
+
+```bash
+docker compose -f compose.dev.yaml exec api php artisan migrate:fresh --seed --force
+```
+
+Cada módulo nuevo debe incluir su seeder de datos demo y registrarlo en el seeder local correspondiente, para que sus datos estén disponibles automáticamente en el ambiente local.
+
 Luego volver al repositorio principal:
 
 ```bash
