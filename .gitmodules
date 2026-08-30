@@ -1,0 +1,6 @@
+[submodule "GAM-Backend"]
+	path = GAM-Backend
+	url = https://github.com/ProyectoGAM/GAM-Backend.git
+[submodule "GAM-Frontend"]
+	path = GAM-Frontend
+	url = https://github.com/ProyectoGAM/GAM-Frontend.git
