@@ -1,5 +1,4 @@
 name: gam-dev
 
 include:
-  - path: ./GAM-Backend/compose.dev.yaml
   - path: ./GAM-Frontend/compose.dev.yaml

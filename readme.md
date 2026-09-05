@@ -9,6 +9,8 @@ Este repositorio actúa como **orquestador del proyecto** y utiliza Git Submodul
 
 Cada submódulo es un repositorio Git independiente, con su propio historial, ramas y releases.
 
+Documentación Swagger UI en desarrollo: http://localhost:8080/docs/
+
 ## Estructura
 
 ```text
