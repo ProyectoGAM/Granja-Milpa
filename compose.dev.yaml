@@ -2,3 +2,4 @@ name: gam-dev
 
 include:
   - path: ./GAM-Frontend/compose.dev.yaml
+  - path: ./GAM-Backend/compose.dev.yaml
