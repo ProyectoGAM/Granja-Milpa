@@ -1,0 +1,31 @@
+# Local environment files (keep sample configuration versioned)
+.env
+.env.*
+!.env.example
+
+# Runtime logs, temporary files, and local databases
+*.log
+*.tmp
+*.tmp.*
+*.sqlite
+*.sqlite3
+*.db
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local editor and IDE state
+.idea/
+.vscode/
+.history/
+*.swp
+*.swo
+*~
+
+# Local tool state
+.codex/
+.cursor/
+.claude/
+.netrc
