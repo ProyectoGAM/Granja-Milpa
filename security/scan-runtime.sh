@@ -121,6 +121,22 @@ scan_runtime() {
         fi
     done
 
+    local fixture_password device_secret fixture_ids
+    fixture_password=$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')
+    device_secret=$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')
+    if ! "${compose[@]}" exec -T -e GAM_SECURITY_FIXTURE_PASSWORD="$fixture_password" -e GAM_SECURITY_DEVICE_SECRET="$device_secret" api php < security/seed-http.php > "$reports/auth-seed.log" 2>&1; then
+        record_failure 'No se pudo preparar el fixture de identidad'
+        return
+    fi
+    fixture_ids=$(cat "$reports/auth-seed.log")
+    local auth_status=0
+    "${compose[@]}" exec -T -e GAM_SECURITY_FIXTURE_PASSWORD="$fixture_password" -e GAM_SECURITY_DEVICE_SECRET="$device_secret" -e GAM_SECURITY_FIXTURE_IDS="$fixture_ids" api php < security/check-authenticated.php > "$reports/http-auth.json" 2> "$reports/http-auth.log" || auth_status=$?
+    unset fixture_password device_secret fixture_ids
+    if (( auth_status != 0 && auth_status != 10 )); then
+        record_failure 'No se completaron las pruebas HTTP autenticadas'
+        return
+    fi
+
     local probe_status=0
     "${compose[@]}" exec -T api php < security/check-http.php > "$reports/http.json" || probe_status=$?
     if (( probe_status != 0 )); then

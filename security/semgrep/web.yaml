@@ -16,3 +16,26 @@ rules:
     severity: ERROR
     message: Evitar evaluar texto como código JavaScript.
     pattern: eval($VALUE)
+  - id: gam-web-document-write
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: Evitar escribir contenido dinámico directamente en el documento.
+    pattern-either:
+      - pattern: document.write($VALUE, ...)
+      - pattern: document.writeln($VALUE, ...)
+  - id: gam-web-dangerous-url
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: Revisar que la URL no permita esquemas o destinos no autorizados.
+    pattern-either:
+      - pattern: $SANITIZER.bypassSecurityTrustUrl($VALUE)
+      - pattern: $SANITIZER.bypassSecurityTrustResourceUrl($VALUE)
+  - id: gam-web-token-storage
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: Revisar el almacenamiento de credenciales en el navegador.
+    pattern-either:
+      - pattern: localStorage.setItem("access_token", $VALUE)
+      - pattern: localStorage.setItem("refresh_token", $VALUE)
+      - pattern: sessionStorage.setItem("access_token", $VALUE)
+      - pattern: sessionStorage.setItem("refresh_token", $VALUE)

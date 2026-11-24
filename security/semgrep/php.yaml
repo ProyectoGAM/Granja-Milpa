@@ -16,3 +16,25 @@ rules:
       - pattern: shell_exec($LEFT . $RIGHT)
       - pattern: exec($LEFT . $RIGHT, ...)
       - pattern: system($LEFT . $RIGHT, ...)
+  - id: gam-php-eval
+    languages: [php]
+    severity: ERROR
+    message: Evitar ejecutar texto como código PHP.
+    pattern: eval($CODE)
+  - id: gam-php-unserialize
+    languages: [php]
+    severity: WARNING
+    message: Revisar el origen y las clases permitidas al deserializar datos.
+    pattern: unserialize($DATA, ...)
+  - id: gam-php-tls-disabled
+    languages: [php]
+    severity: ERROR
+    message: Mantener la verificación TLS habilitada.
+    pattern-either:
+      - pattern: curl_setopt($CURL, CURLOPT_SSL_VERIFYPEER, false)
+      - pattern: curl_setopt($CURL, CURLOPT_SSL_VERIFYHOST, 0)
+  - id: gam-php-debug-output
+    languages: [php]
+    severity: WARNING
+    message: Evitar la exposición de configuración y detalles del runtime.
+    pattern: phpinfo(...)

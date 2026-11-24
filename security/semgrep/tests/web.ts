@@ -16,3 +16,18 @@ element.textContent = value;
 eval(value);
 // ok: gam-web-dynamic-eval
 JSON.parse(value);
+
+// ruleid: gam-web-document-write
+document.write(value);
+// ok: gam-web-document-write
+element.textContent = value;
+
+// ruleid: gam-web-dangerous-url
+sanitizer.bypassSecurityTrustUrl(value);
+// ok: gam-web-dangerous-url
+sanitizer.sanitize(value);
+
+// ruleid: gam-web-token-storage
+localStorage.setItem("access_token", value);
+// ok: gam-web-token-storage
+localStorage.setItem("theme", value);
