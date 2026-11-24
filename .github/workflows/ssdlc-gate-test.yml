@@ -1,0 +1,21 @@
+name: Prueba SSDLC del gate
+on:
+  push:
+    branches: [ssdlc-gate-test]
+permissions:
+  contents: read
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 10
+  release:
+    needs: security
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo etiqueta simulada
+  deploy:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo despliegue simulado
