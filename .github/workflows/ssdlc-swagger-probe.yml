@@ -1,0 +1,25 @@
+name: Diagnóstico de imagen Swagger
+on:
+  push:
+    branches: [ssdlc-gate-test]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        repository: [docker.swagger.io/swaggerapi/swagger-ui, swaggerapi/swagger-ui]
+    steps:
+      - name: Construir imagen auxiliar aislada
+        env:
+          IMAGE_REPOSITORY: ${{ matrix.repository }}
+        run: |
+          set -euo pipefail
+          df -h /
+          docker version --format '{{.Server.Version}}'
+          docker compose version
+          work=$(mktemp -d)
+          printf 'FROM %s:v5.36.0@sha256:a6c9dae9b7bf7aa691ad8cf76574d0a9c3c8ce6e0d3946d6bb55acc36f24c4e5\nRUN apk upgrade --no-cache\n' "$IMAGE_REPOSITORY" > "$work/Dockerfile"
+          docker build --progress=plain --platform linux/amd64 "$work"
