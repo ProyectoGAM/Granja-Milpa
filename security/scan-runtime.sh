@@ -9,8 +9,10 @@ scan_runtime() {
                 GAM_REDIS_PASSWORD=fixture SESSION_DOMAIN=web.test IDENTITY_PIN_PEPPER=fixture \
                 SANCTUM_STATEFUL_DOMAINS=web.test DEMO_DB_RESET_ENABLED=false \
                 docker compose --env-file /dev/null -f compose.prod.yaml config --format json
-        ) | python3 security/check-compose.py "$model" > "$reports/hardening-$model.log" 2>&1; then
+        ) > "$scratch/production-$model.json" ||
+           ! python3 security/check-compose.py "$model" < "$scratch/production-$model.json" > "$reports/hardening-$model.log" 2>&1; then
             record_failure "Hardening de Compose falló para $model"
+            return
         fi
     done
     if ! "${compose[@]}" config --format json | python3 security/check-compose.py fixture \
@@ -19,17 +21,20 @@ scan_runtime() {
         return
     fi
 
-    local images=(
-        "$GAM_SECURITY_API" "$GAM_SECURITY_WEB"
-        postgres:18-alpine redis:8-alpine
-        docker.swagger.io/swaggerapi/swagger-ui:v5.32.14
-        nginxinc/nginx-unprivileged:1.28-alpine
-    )
-    local name ref id
+    local refs
+    refs=$(python3 -c 'import json, sys; services = json.load(open(sys.argv[1]))["services"]; print(*(services[n]["image"] for n in ("postgres", "redis", "swagger-ui", "gateway")), sep="\n")' "$scratch/production-backend.json") || {
+        record_failure 'No se pudo obtener el inventario de imágenes de producción'
+        return
+    }
+    local auxiliary=()
+    mapfile -t auxiliary <<< "$refs"
+    local images=("$GAM_SECURITY_API" "$GAM_SECURITY_WEB" "${auxiliary[@]}")
+    local name ref id alias service container
+    local -A image_ids=()
     for name in backend frontend; do
         ref=$GAM_SECURITY_API
         [[ "$name" == backend ]] || ref=$GAM_SECURITY_WEB
-        if ! docker build --platform linux/amd64 --target runtime -t "$ref" "$scratch/$name" \
+        if ! timeout 900 docker build --platform linux/amd64 --provenance=false --target runtime -t "$ref" "$scratch/$name" \
             > "$reports/build-$name.log" 2>&1; then
             record_failure "No se pudo construir runtime $name"
             return
@@ -46,7 +51,24 @@ scan_runtime() {
             return
         fi
         id=$(docker image inspect --format '{{.Id}}' "$ref") || { record_failure "Imagen ausente: $name"; return; }
+        image_ids[$name]=$id
         printf '%s %s %s\n' "$name" "$ref" "$id" >> "$reports/images.txt"
+        if (( index >= 2 )); then
+            alias="gam-security-$name:$project"
+            if ! docker image tag "$id" "$alias"; then
+                record_failure "No se pudo fijar la imagen $name"
+                return
+            fi
+            export "GAM_SECURITY_${name^^}=$alias"
+            built_images+=("$alias")
+        fi
+        if (( index < 2 )); then
+            local user
+            user=$(docker image inspect --format '{{.Config.User}}' "$id")
+            if [[ -z "$user" || "$user" == root* || "$user" == 0 || "$user" == 0:* ]]; then
+                record_failure "El runtime $name no declara un usuario sin privilegios"
+            fi
+        fi
         if docker image save -o "$scratch/image.tar" "$id"; then
             chmod 644 "$scratch/image.tar"
             run_tool trivy image --skip-db-update --input /input/image.tar --scanners vuln \
@@ -63,6 +85,19 @@ scan_runtime() {
         record_failure 'El entorno HTTP no inició'
         return
     fi
+    for service in api app-init web postgres redis swagger-ui gateway; do
+        name=$service
+        case "$service" in
+            api|app-init) name=backend ;;
+            web) name=frontend ;;
+            swagger-ui) name=swagger ;;
+        esac
+        container=$("${compose[@]}" ps -aq "$service")
+        if [[ -z "$container" ]] || [[ $(docker inspect --format '{{.Image}}' "$container") != "${image_ids[$name]}" ]]; then
+            record_failure "El fixture $service no está ejecutando la imagen analizada"
+            return
+        fi
+    done
 
     local probe_status=0
     "${compose[@]}" exec -T api php < security/check-http.php > "$reports/http.json" || probe_status=$?

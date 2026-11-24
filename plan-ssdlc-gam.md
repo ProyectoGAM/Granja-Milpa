@@ -83,7 +83,7 @@ bash security/run.sh all
 | --- | --- | --- |
 | `/` y `/auth` | `200` HTML | SPA servida desde la imagen final, `nosniff` y protección contra iframes. |
 | `/api/v1/health` | `200` JSON | Cuerpo `status=ok` y API servida a través del gateway. |
-| `/api/v1/me` con `Accept: application/json` | `401` JSON | Respuesta sin información identificatoria ni trazas internas. |
+| `/api/v1/me` con `Accept: application/json` | `401` `application/problem+json` | Respuesta sin información identificatoria ni trazas internas. |
 | `/sanctum/csrf-cookie` con origen propio | `204` | Verificar atributos en los headers sin guardar valores. La cookie de sesión debe ser `Secure` y `HttpOnly`. La cookie `XSRF-TOKEN` debe seguir siendo legible para el cliente web. |
 
 Mantener la URL fija y la red sin salida. El fixture usa HTTP interno, por lo que el TLS, HSTS y el comportamiento real del navegador con las cookies se validan en el borde según la sección 7. La aparición de una alerta o la ausencia de alertas en estas rutas no determina cobertura de autorización, reglas de negocio o navegación autenticada.

@@ -7,7 +7,7 @@ $probe = [
     '/' => [200, 'text/html'],
     '/auth' => [200, 'text/html'],
     '/api/v1/health' => [200, 'application/json'],
-    '/api/v1/me' => [401, 'application/json'],
+    '/api/v1/me' => [401, 'application/problem+json'],
     '/sanctum/csrf-cookie' => [204, null],
 ];
 
@@ -44,6 +44,10 @@ foreach ($probe as $route => [$status, $contentType]) {
     $cookies = [];
     if ($route === '/api/v1/health') {
         $passed = $passed && (json_decode($body, true)['status'] ?? null) === 'ok';
+    } elseif ($route === '/api/v1/me') {
+        $problem = json_decode($body, true);
+        $passed = $passed && is_array($problem) && ($problem['status'] ?? null) === 401
+            && array_intersect(['trace', 'exception', 'file'], array_keys($problem)) === [];
     } elseif (in_array($route, ['/', '/auth'], true)) {
         $passed = $passed
             && strtolower($headers['x-content-type-options'][0] ?? '') === 'nosniff'

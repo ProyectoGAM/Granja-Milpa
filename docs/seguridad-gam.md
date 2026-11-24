@@ -16,3 +16,15 @@ Los activos principales son las credenciales, sesiones, datos de clientes, saldo
 La prioridad multiplica impacto y probabilidad de 1 a 3. Registrar el riesgo residual después de comprobar cada control. Backend y frontend mantienen las pruebas de su aplicación. El responsable de release conserva evidencia de las imágenes y quien administra la VPS verifica el borde, los volúmenes y los respaldos.
 
 Ver el [plan SSDLC](../plan-ssdlc-gam.md) para el orden de implementación y los criterios de cierre.
+
+## Línea base de dependencias
+
+El análisis de los tres lockfiles detectó el aviso de severidad alta de `league/commonmark` 2.10.0. Se actualizó el lock de Composer a 2.10.8. La corrida local posterior de SAST y SCA terminó con código 0 y 27 hallazgos informativos según la política del plan. [Aviso de CommonMark](https://github.com/advisories/GHSA-3q6v-r5mr-hxv8)
+
+| Aviso alto exclusivo de desarrollo | Propietario del seguimiento | Verificación |
+| --- | --- | --- |
+| CVE-2026-109413 · `symfony/yaml` | Mantenimiento backend | Revisar una actualización compatible y repetir SCA con el lock de Composer. |
+| CVE-2026-93749 · `source-map-js` | Mantenimiento frontend | Revisar la resolución transitiva de Angular y comprobar el lock npm. |
+| CVE-2026-112942 · `vite` | Mantenimiento frontend | Revisar el actualizador de Angular y comprobar build y SCA con el lock resultante. |
+
+Los responsables deben revisar estos hallazgos en el siguiente ciclo de mantenimiento. Si aparecen en el inventario de producción, se aplica el bloqueo de severidad alta.
