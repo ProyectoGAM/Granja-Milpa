@@ -38,3 +38,12 @@ ZAP 2.17.0 generó el reporte sobre las cinco solicitudes previstas. La alerta d
 El PostgreSQL parcheado usa `su-exec` para la transición de usuario del entrypoint oficial. La prueba local arrancó con un volumen inicializado por la imagen original de PostgreSQL 18.7 y conservó un registro sintético. El procedimiento de release debe construir `api`, `gateway`, `postgres` y `swagger-ui` con el mismo SHA o cargar los artefactos aprobados antes de recrearlos. Verificarlo en staging antes de adaptar la VPS del cliente.
 
 Como alternativa a los paquetes Debian que Trivy señaló sin versión corregida, se construyó PHP 8.5.13 sobre Alpine 3.24. El escaneo del candidato reportó cero hallazgos bloqueantes. La imagen conserva UID/GID 33 para el almacenamiento persistente y sus herramientas PostgreSQL produjeron y restauraron un backup de prueba que conservó el dato sintético. Dos corridas de código concurrentes aprobaron la política de frescura de Trivy y conservaron los IDs de los contenedores de desarrollo.
+
+## Evidencia de aceptación
+
+- La revisión `00d2d9e` ejecutó localmente la suite completa con código 0. Se construyeron y analizaron seis imágenes. Las cinco comprobaciones HTTP pasaron y ZAP emitió el reporte. Dos corridas completas simultáneas conservaron los IDs de contenedores y los volúmenes del stack de desarrollo.
+- Se simuló la indisponibilidad de la base de Trivy y se verificó un código 20, diagnóstico y limpieza del proyecto descartable. La prueba de política comprueba los códigos 0, 10 y 20.
+- Los workflows de componente aprobaron y los artefactos descargados contienen únicamente `summary.json` y `summary.md`. [Backend](https://github.com/ProyectoGAM/GAM-Backend/actions/runs/45482039783) · [Frontend](https://github.com/ProyectoGAM/GAM-Frontend/actions/runs/45482042540)
+- La prueba del grafo de release en un ref dedicado falló con código 10 y GitHub omitió los jobs de etiquetado y despliegue. [Prueba del gate](https://github.com/ProyectoGAM/Granja-Milpa/actions/runs/45481415178)
+- Cosign verificó la firma del índice de Trivy 0.76.2 mediante el emisor de GitHub Actions. El índice firmado contiene el manifiesto amd64 que usa la suite. [Procedimiento del proveedor](https://trivy.dev/docs/latest/getting-started/signature-verification/)
+- Se leyó y escribió un volumen sintético previamente inicializado con UID/GID 33 en Debian desde el runtime PHP Alpine. Se verificó una restauración de PostgreSQL con los clientes del nuevo runtime.

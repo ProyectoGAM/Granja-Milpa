@@ -53,8 +53,17 @@ scan_runtime() {
         if (( index >= 2 )); then
             if python3 -c 'import json, sys; sys.exit(not json.load(open(sys.argv[1]))["services"][sys.argv[2]].get("build"))' \
                 "$scratch/production-backend.json" "${services[index]}"; then
-                if ! production_compose backend build "${services[index]}" > "$reports/build-$name.log" 2>&1; then
-                    record_failure "No se pudo construir $name"
+                if ! production_compose backend build "${services[index]}" > "$reports/build-$name.log" 2>&1 &&
+                   ! production_compose backend build "${services[index]}" >> "$reports/build-$name.log" 2>&1; then
+                    local reason='revisar el log local'
+                    if grep -Eqi 'no space left|not enough space' "$reports/build-$name.log"; then
+                        reason='espacio insuficiente en el runner'
+                    elif grep -Eqi '429|toomanyrequests|rate limit' "$reports/build-$name.log"; then
+                        reason='límite de peticiones del registro'
+                    elif grep -Eqi 'transient error|dial tcp|timed out|TLS handshake|failed to resolve' "$reports/build-$name.log"; then
+                        reason='conectividad con el registro o repositorio de paquetes'
+                    fi
+                    record_failure "No se pudo construir $name ($reason)"
                     return
                 fi
                 built_images+=("$ref")
