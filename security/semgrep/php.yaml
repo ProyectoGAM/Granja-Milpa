@@ -1,0 +1,18 @@
+rules:
+  - id: gam-php-interpolated-sql
+    languages: [php]
+    severity: WARNING
+    message: Revisar que el SQL use parámetros separados del texto de la consulta.
+    patterns:
+      - pattern-either:
+          - pattern: DB::select($LEFT . $RIGHT, ...)
+          - pattern: DB::statement($LEFT . $RIGHT, ...)
+          - pattern: $QUERY->whereRaw($LEFT . $RIGHT, ...)
+  - id: gam-php-shell
+    languages: [php]
+    severity: ERROR
+    message: Usar una API de procesos con argumentos separados del comando.
+    pattern-either:
+      - pattern: shell_exec($LEFT . $RIGHT)
+      - pattern: exec($LEFT . $RIGHT, ...)
+      - pattern: system($LEFT . $RIGHT, ...)

@@ -1,0 +1,42 @@
+name: Seguridad GAM
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '33 8 * * 2'
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    name: SSDLC integración
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Verificar gitlinks
+        shell: bash
+        run: |
+          set -euo pipefail
+          for component in GAM-Backend GAM-Frontend; do
+            test "$(git rev-parse "HEAD:$component")" = "$(git -C "$component" rev-parse HEAD)"
+          done
+      - name: Ejecutar suite Docker
+        run: bash security/run.sh all
+      - name: Publicar resultados filtrados
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: security-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            .security-reports/*/summary.json
+            .security-reports/*/summary.md
+          if-no-files-found: warn
+          retention-days: 14

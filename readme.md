@@ -427,3 +427,7 @@ git push
 ```
 
 Esta separación permite mantener Backend y Frontend como proyectos independientes mientras GAM funciona como repositorio principal de integración y desarrollo.
+
+## Seguridad
+
+La [suite SSDLC](security/README.md) documenta cómo ejecutar los controles de seguridad en Docker. El [registro de riesgos](docs/seguridad-gam.md) vincula los controles con su evidencia.
