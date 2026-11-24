@@ -47,3 +47,27 @@ Como alternativa a los paquetes Debian que Trivy señaló sin versión corregida
 - La prueba del grafo de release en un ref dedicado falló con código 10 y GitHub omitió los jobs de etiquetado y despliegue. [Prueba del gate](https://github.com/ProyectoGAM/Granja-Milpa/actions/runs/45481415178)
 - Cosign verificó la firma del índice de Trivy 0.76.2 mediante el emisor de GitHub Actions. El índice firmado contiene el manifiesto amd64 que usa la suite. [Procedimiento del proveedor](https://trivy.dev/docs/latest/getting-started/signature-verification/)
 - Se leyó y escribió un volumen sintético previamente inicializado con UID/GID 33 en Debian desde el runtime PHP Alpine. Se verificó una restauración de PostgreSQL con los clientes del nuevo runtime.
+- La integración en GitHub Actions aprobó con los gitlinks exactos de backend `59748c6` y frontend `ab2e012`. El artefacto filtrado registra las seis imágenes, las versiones de las herramientas y cero errores. [Integración](https://github.com/ProyectoGAM/Granja-Milpa/actions/runs/45482989549)
+- El diagnóstico en GitHub confirmó que el mirror de Docker Hub construye Swagger UI con el mismo digest. El registry anterior falló al construir ese mismo artefacto. [Diagnóstico](https://github.com/ProyectoGAM/Granja-Milpa/actions/runs/45483136120)
+- PHPUnit verificó localmente 79 pruebas de identidad, aislamiento, sesiones, cuenta corriente y entregas con PHP 8.5.13 Alpine y PostgreSQL aislado.
+- La raíz exige `SSDLC integración` para `main`. Frontend exige `SSDLC componente` y `verify` para `main` y `develop`. Las reglas se agregaron mediante rulesets independientes.
+- Ambos workflows reales de release ejecutaron la suite completa en `ssdlc-security`. Los artefactos de los dos reportan código 0, seis imágenes y los SHA `14a26e4`, `59748c6` y `ab2e012`. GitHub omitió `release` y `deploy` en esos refs. [Backend](https://github.com/ProyectoGAM/GAM-Backend/actions/runs/45483290478) · [Frontend](https://github.com/ProyectoGAM/GAM-Frontend/actions/runs/45483290967)
+- Backend exige `SSDLC componente` y `verify` en `main` y `develop`. El ruleset se agregó junto a la protección existente. PHPStan aprobó sin errores en el entorno local de la revisión candidata.
+- La prueba con un nombre de imagen inexistente devolvió código 20, conservó el diagnóstico y quitó los contenedores y volúmenes del fixture.
+
+## Verificación en los entornos de destino
+
+| Verificación pendiente | Evidencia | Responsable y momento |
+| --- | --- | --- |
+| Ejecución semanal | La definición semanal está activa en `main`. La primera ejecución programada está prevista para el 1 de diciembre de 2026 a las 05:33 de Uruguay. | Mantenimiento de la raíz verifica el primer evento `schedule`. |
+| Proxy y TLS en staging | HTTPS, redirección, certificado, cookies, CORS, IP observada, HSTS, política CSP revisada y Reverb funcional. El entorno de staging aún debe identificarse. | Operación de infraestructura y QA antes del primer release. |
+| Respaldo y datos de la VPS | Permisos de archivos y respaldos, política de cifrado y evidencia de restauración en un entorno autorizado. La restauración sintética local está verificada. | Operación de infraestructura antes del primer release. |
+| Imagen efectivamente desplegada | Revisar el script remoto y comparar los IDs o digests del inventario del workflow y los contenedores activos. | Responsable de release y operación al validar el primer release autorizado. |
+
+## Integración
+
+Backend quedó integrado en `develop` como `3271117` y frontend como `617f36c`. La raíz quedó integrada en `main` como `758eafe`. Se comprobó que el contenido de cada merge conserva las revisiones revisadas. Los submódulos publicados en `develop` contienen los commits referidos por los gitlinks. [Backend](https://github.com/ProyectoGAM/GAM-Backend/pull/68) · [Frontend](https://github.com/ProyectoGAM/GAM-Frontend/pull/53) · [Raíz](https://github.com/ProyectoGAM/Granja-Milpa/pull/1)
+
+El CI del PR backend aprobó PHPUnit con 1056 pruebas y 10688 aserciones. PHPStan aprobó sin errores. En el fixture se verificó que el login web sin token CSRF devuelve 419 y que el origen ajeno no recibe una autorización CORS válida. [CI backend](https://github.com/ProyectoGAM/GAM-Backend/actions/runs/45482987550)
+
+El workflow de raíz está activo en GitHub y declara ejecución semanal los martes a las 08:33 UTC. Las corridas sobre la rama integrada quedan vinculadas al mismo commit `758eafe`. [Definición del workflow](https://github.com/ProyectoGAM/Granja-Milpa/blob/main/.github/workflows/security.yml) · [Push a main](https://github.com/ProyectoGAM/Granja-Milpa/actions/runs/45485416500) · [Ejecución manual](https://github.com/ProyectoGAM/Granja-Milpa/actions/runs/45485511010)
