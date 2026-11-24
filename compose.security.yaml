@@ -1,0 +1,39 @@
+services:
+  semgrep:
+    image: semgrep/semgrep@sha256:25251de66c3b0fdea1c1c519bbc130170349f3da79edd517335b847f30d3c493
+    platform: linux/amd64
+    entrypoint: [semgrep]
+    network_mode: none
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    volumes:
+      - ${GAM_SECURITY_INPUT:-./security}:/input:ro
+      - ./security:/config:ro
+
+  trivy:
+    image: aquasec/trivy@sha256:6fa071ef8daa2e58b90cbf1710bedca91adbb3bf98693533226f442035b836a6
+    platform: linux/amd64
+    entrypoint: [trivy, --cache-dir, /cache]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    volumes:
+      - ${GAM_SECURITY_INPUT:-./security}:/input:ro
+      - trivy-cache:/cache
+
+  zap:
+    image: ghcr.io/zaproxy/zaproxy@sha256:c2d63bbb2d907a5c5257914fb20e26e969c92b25f265def7f89f08203f912882
+    platform: linux/amd64
+    entrypoint: [zap.sh]
+    command: [-cmd, -autorun, /config/zap.yaml]
+    networks: [dast-front]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    volumes:
+      - ./security:/config:ro
+
+networks:
+  dast-front:
+    internal: true
+
+volumes:
+  trivy-cache:

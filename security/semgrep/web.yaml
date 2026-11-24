@@ -1,0 +1,18 @@
+rules:
+  - id: gam-web-html-trust
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: Revisar el origen del HTML antes de desactivar el sanitizador de Angular.
+    pattern: $SANITIZER.bypassSecurityTrustHtml($VALUE)
+  - id: gam-web-dynamic-html
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: Usar textContent o una plantilla Angular para mostrar contenido dinámico.
+    patterns:
+      - pattern: $ELEMENT.innerHTML = $VALUE
+      - pattern-not: $ELEMENT.innerHTML = "..."
+  - id: gam-web-dynamic-eval
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: Evitar evaluar texto como código JavaScript.
+    pattern: eval($VALUE)

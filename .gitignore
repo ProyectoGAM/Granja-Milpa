@@ -29,3 +29,6 @@ Desktop.ini
 .cursor/
 .claude/
 .netrc
+
+# Security scan output
+.security-reports/

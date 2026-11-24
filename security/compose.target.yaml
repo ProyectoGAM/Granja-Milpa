@@ -1,0 +1,126 @@
+x-api: &api
+  image: ${GAM_SECURITY_API:-gam-security-api:local}
+  pull_policy: never
+  networks: [dast-back]
+  environment:
+    APP_ENV: production
+    APP_DEBUG: "false"
+    APP_KEY: ${GAM_SECURITY_APP_KEY:-}
+    APP_URL: http://web:8080
+    DB_CONNECTION: pgsql
+    DB_HOST: postgres
+    DB_DATABASE: gam_security
+    DB_USERNAME: gam_security
+    DB_PASSWORD: gam-fixture-only
+    REDIS_HOST: redis
+    SESSION_DRIVER: redis
+    SESSION_COOKIE: gam_session
+    SESSION_SECURE_COOKIE: "true"
+    SESSION_SAME_SITE: lax
+    SANCTUM_STATEFUL_DOMAINS: web:8080
+    CACHE_STORE: redis
+    MAIL_MAILER: array
+    DEMO_DB_RESET_ENABLED: "false"
+    IDENTITY_PIN_PEPPER: gam-fixture-only
+    LOG_CHANNEL: stderr
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+
+services:
+  postgres:
+    image: ${GAM_SECURITY_POSTGRES:-postgres:18-alpine}
+    pull_policy: never
+    networks: [dast-back]
+    environment:
+      POSTGRES_DB: gam_security
+      POSTGRES_USER: gam_security
+      POSTGRES_PASSWORD: gam-fixture-only
+    volumes:
+      - fixture-postgres:/var/lib/postgresql
+    healthcheck:
+      test: [CMD, pg_isready, -U, gam_security, -d, gam_security]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: ${GAM_SECURITY_REDIS:-redis:8-alpine}
+    pull_policy: never
+    command: [redis-server, --save, "", --appendonly, "no"]
+    networks: [dast-back]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+
+  app-init:
+    <<: *api
+    command: [php, artisan, migrate, --force, --no-interaction]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  api:
+    <<: *api
+    command: [php-fpm, -F]
+    depends_on:
+      app-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD, php, -r, "exit(fsockopen('127.0.0.1', 9000) ? 0 : 1);"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  swagger-ui:
+    image: ${GAM_SECURITY_SWAGGER:-docker.swagger.io/swaggerapi/swagger-ui:v5.32.14}
+    pull_policy: never
+    networks: [dast-back]
+    environment:
+      BASE_URL: /docs
+
+  gateway:
+    image: ${GAM_SECURITY_GATEWAY:-nginxinc/nginx-unprivileged:1.28-alpine}
+    pull_policy: never
+    networks: [dast-back]
+    environment:
+      APP_ENV: production
+      NGINX_ENVSUBST_FILTER: "^APP_ENV$$"
+    volumes:
+      - ${GAM_SECURITY_INPUT:-.}/backend/docker/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    depends_on:
+      api:
+        condition: service_healthy
+      swagger-ui:
+        condition: service_started
+    healthcheck:
+      test: [CMD, wget, -qO, /dev/null, "http://127.0.0.1:8080/status"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  web:
+    image: ${GAM_SECURITY_WEB:-gam-security-web:local}
+    pull_policy: never
+    networks: [dast-front, dast-back]
+    environment:
+      API_UPSTREAM: http://gateway:8080
+      NGINX_ENVSUBST_FILTER: API_UPSTREAM
+    depends_on:
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -qO, /dev/null, "http://127.0.0.1:8080/healthz"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+networks:
+  dast-back:
+    internal: true
+
+volumes:
+  fixture-postgres:

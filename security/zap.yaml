@@ -1,0 +1,34 @@
+env:
+  contexts:
+    - name: gam-local
+      urls: ["http://web:8080"]
+  parameters:
+    failOnError: true
+    failOnWarning: true
+    progressToStdout: true
+jobs:
+  - type: passiveScan-config
+    parameters:
+      scanOnlyInScope: true
+  - type: requestor
+    requests:
+      - url: http://web:8080/
+        responseCode: 200
+      - url: http://web:8080/auth
+        responseCode: 200
+      - url: http://web:8080/api/v1/health
+        responseCode: 200
+      - url: http://web:8080/api/v1/me
+        headers: ["Accept: application/json"]
+        responseCode: 401
+      - url: http://web:8080/sanctum/csrf-cookie
+        headers: ["Origin: http://web:8080"]
+        responseCode: 204
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 0
+  - type: report
+    parameters:
+      template: traditional-json
+      reportDir: /tmp
+      reportFile: zap.json
