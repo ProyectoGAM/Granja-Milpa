@@ -34,6 +34,7 @@ def evaluate(directory, component, operational, mode="code"):
     if mode == "all":
         for target in ("backend", "frontend", "postgres", "redis", "swagger", "gateway"):
             read(f"image-{target}", lambda report: image(report, target))
+        read("http-auth", authenticated_http)
         read("http", http)
         if not any(item["tool"] == "http" and item["blocking"] for item in findings):
             read("zap", zap)
@@ -117,6 +118,15 @@ def http(results):
     for entry in results:
         if not entry["passed"]:
             yield dict(tool="http", id="response-contract", target=entry["path"], severity="HIGH", blocking=True)
+
+
+def authenticated_http(results):
+    expected = {"inicio PIN compartido", "lista de unidades autorizadas", "unidad ajena", "inventario de unidad ajena", "PIN sin contexto de sesión", "clientes sin credenciales", "credenciales inválidas", "inicio de sesión", "perfil autenticado", "clientes sin permiso", "cierre de sesión", "sesión revocada", "inicio de administrador", "clientes con permiso", "cliente inválido", "clientes tras validación", "alta de cliente", "ajuste financiero", "reintento idempotente", "conflicto de versión financiera", "consulta de cuenta", "consulta de movimientos", "consulta de repartos actuales", "reparto inválido", "consulta tras reparto inválido", "sesión revocada /api/v1/repartos/actuales", "sesión revocada /api/v1/inventory/balances", "cierre de administrador"}
+    if {entry["name"] for entry in results} != expected:
+        raise ValueError("missing authenticated HTTP coverage")
+    for entry in results:
+        if not entry["passed"]:
+            yield dict(tool="http", id="authenticated-contract", target=entry["name"], severity="HIGH", blocking=True)
 
 
 def zap(report):
