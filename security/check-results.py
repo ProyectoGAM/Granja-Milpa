@@ -7,11 +7,19 @@ from pathlib import Path
 def evaluate(directory, component, operational, mode="code"):
     findings = []
     errors = []
+    versions = {}
     components = ("backend", "frontend") if component == "both" else (component,)
 
     def read(name, parser):
         try:
-            findings.extend(parser(json.loads((directory / f"{name}.json").read_text())))
+            payload = json.loads((directory / f"{name}.json").read_text())
+            if name.startswith("sast-") and payload.get("version"):
+                versions["semgrep"] = payload["version"]
+            elif name.startswith(("sca-", "image-")) and payload.get("Trivy", {}).get("Version"):
+                versions["trivy"] = payload["Trivy"]["Version"]
+            elif name == "zap" and payload.get("@version"):
+                versions["zap"] = payload["@version"]
+            findings.extend(parser(payload))
         except (OSError, ValueError, TypeError, AttributeError, KeyError) as exc:
             errors.append(f"{name}: {type(exc).__name__}")
 
@@ -39,10 +47,17 @@ def evaluate(directory, component, operational, mode="code"):
     result = 20 if errors or operational else 10 if any(item["blocking"] for item in findings) else 0
     summary = {
         "result": result,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "platform": "linux/amd64",
+        "versions": versions,
         "revisions": (directory / "revisions.txt").read_text().splitlines(),
         "errors": errors,
         "findings": findings,
     }
+    inventory = directory / "images.txt"
+    if inventory.is_file():
+        summary["images"] = [dict(zip(("component", "reference", "id"), row.split(), strict=True))
+                             for row in inventory.read_text().splitlines()]
     (directory / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
     lines = [f"# Seguridad GAM\n\nResultado: {result}\n", *summary["revisions"]]
     lines.extend(f"- Error: {item}" for item in errors)

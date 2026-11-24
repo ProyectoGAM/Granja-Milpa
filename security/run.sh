@@ -76,6 +76,12 @@ scan_component() {
         record_failure "$repo: no se pudo preparar el snapshot"
         return
     fi
+    if find "$scratch/$name" -type f \( -name '.env' -o -name '.env.*' -o -name '*.p12' -o -name '*.pfx' -o -name '*.key' \) \
+        ! -name '*.example' ! -name '*.sample' -print -quit | grep -q .; then
+        record_failure "$repo: el snapshot contiene configuración privada o material de claves"
+        return
+    fi
+    touch "$scratch/$name.approved"
 
     (umask 077; run_tool semgrep scan --config /config/semgrep --metrics=off --disable-version-check --strict --json \
         --exclude '*.spec.ts' --exclude '*.test.ts' --exclude tests --exclude android --exclude ios "/input/$name" \
@@ -125,7 +131,7 @@ else
     record_failure 'Trivy: no se pudo descargar la base de vulnerabilidades'
 fi
 
-if [[ "$mode" == all && "$db_ready" == true && -f "$scratch/backend/Dockerfile" && -f "$scratch/frontend/Dockerfile" ]]; then
+if [[ "$mode" == all && "$db_ready" == true && -f "$scratch/backend.approved" && -f "$scratch/frontend.approved" ]]; then
     scan_runtime
 fi
 

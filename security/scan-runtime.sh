@@ -1,15 +1,18 @@
 # Sourced by run.sh. The caller owns the scratch directory and Compose project.
+production_compose() (
+    cd "$scratch/$1"
+    shift
+    export RELEASE_SHA="$project" EDGE_NETWORK=fixture-edge APP_URL=https://web.test
+    export APP_KEY="$GAM_SECURITY_APP_KEY" DB_DATABASE=fixture DB_USERNAME=fixture DB_PASSWORD=fixture
+    export GAM_REDIS_PASSWORD=fixture SESSION_DOMAIN=web.test IDENTITY_PIN_PEPPER=fixture
+    export SANCTUM_STATEFUL_DOMAINS=web.test DEMO_DB_RESET_ENABLED=false DOCKER_DEFAULT_PLATFORM=linux/amd64
+    docker compose --env-file /dev/null -p "$project" -f compose.prod.yaml "$@"
+)
+
 scan_runtime() {
     local model
     for model in backend frontend; do
-        if ! (
-            cd "$scratch/$model"
-            env RELEASE_SHA=security-fixture EDGE_NETWORK=fixture-edge APP_URL=https://web.test \
-                APP_KEY="$GAM_SECURITY_APP_KEY" DB_DATABASE=fixture DB_USERNAME=fixture DB_PASSWORD=fixture \
-                GAM_REDIS_PASSWORD=fixture SESSION_DOMAIN=web.test IDENTITY_PIN_PEPPER=fixture \
-                SANCTUM_STATEFUL_DOMAINS=web.test DEMO_DB_RESET_ENABLED=false \
-                docker compose --env-file /dev/null -f compose.prod.yaml config --format json
-        ) > "$scratch/production-$model.json" ||
+        if ! production_compose "$model" config --format json > "$scratch/production-$model.json" ||
            ! python3 security/check-compose.py "$model" < "$scratch/production-$model.json" > "$reports/hardening-$model.log" 2>&1; then
             record_failure "Hardening de Compose falló para $model"
             return
@@ -43,12 +46,22 @@ scan_runtime() {
     done
 
     local names=(backend frontend postgres redis swagger gateway)
+    local services=(api web postgres redis swagger-ui gateway)
     for index in "${!images[@]}"; do
         ref=${images[index]}
         name=${names[index]}
-        if (( index >= 2 )) && ! docker pull --platform linux/amd64 "$ref" > "$reports/pull-$name.log" 2>&1; then
-            record_failure "No se pudo descargar $name"
-            return
+        if (( index >= 2 )); then
+            if python3 -c 'import json, sys; sys.exit(not json.load(open(sys.argv[1]))["services"][sys.argv[2]].get("build"))' \
+                "$scratch/production-backend.json" "${services[index]}"; then
+                if ! production_compose backend build "${services[index]}" > "$reports/build-$name.log" 2>&1; then
+                    record_failure "No se pudo construir $name"
+                    return
+                fi
+                built_images+=("$ref")
+            elif ! docker pull --platform linux/amd64 "$ref" > "$reports/pull-$name.log" 2>&1; then
+                record_failure "No se pudo descargar $name"
+                return
+            fi
         fi
         id=$(docker image inspect --format '{{.Id}}' "$ref") || { record_failure "Imagen ausente: $name"; return; }
         image_ids[$name]=$id
@@ -110,6 +123,6 @@ scan_runtime() {
         record_failure 'ZAP no completó el análisis pasivo'
         return
     fi
-    "${compose[@]}" cp zap:/zap/wrk/zap.json "$reports/zap.json" ||
+    "${compose[@]}" cp zap:/tmp/zap.json "$reports/zap.json" ||
         record_failure 'ZAP no generó el reporte esperado'
 }

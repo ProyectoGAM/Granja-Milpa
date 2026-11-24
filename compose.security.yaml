@@ -30,7 +30,6 @@ services:
     cap_drop: [ALL]
     volumes:
       - ./security:/config:ro
-      - zap-reports:/zap/wrk
 
 networks:
   dast-front:
@@ -38,4 +37,3 @@ networks:
 
 volumes:
   trivy-cache:
-  zap-reports:
