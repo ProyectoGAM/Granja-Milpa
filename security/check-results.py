@@ -58,6 +58,12 @@ def evaluate(directory, component, operational, mode="code"):
     if inventory.is_file():
         summary["images"] = [dict(zip(("component", "reference", "id"), row.split(), strict=True))
                              for row in inventory.read_text().splitlines()]
+    db_metadata = directory / "trivy-db-meta.json"
+    if db_metadata.is_file() and db_metadata.stat().st_size:
+        try:
+            summary["trivy_db_updated_at"] = json.loads(db_metadata.read_text())["UpdatedAt"]
+        except (OSError, ValueError, KeyError):
+            pass
     (directory / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
     lines = [f"# Seguridad GAM\n\nResultado: {result}\n", *summary["revisions"]]
     lines.extend(f"- Error: {item}" for item in errors)

@@ -28,3 +28,13 @@ El análisis de los tres lockfiles detectó el aviso de severidad alta de `leagu
 | CVE-2026-112942 · `vite` | Mantenimiento frontend | Revisar el actualizador de Angular y comprobar build y SCA con el lock resultante. |
 
 Los responsables deben revisar estos hallazgos en el siguiente ciclo de mantenimiento. Si aparecen en el inventario de producción, se aplica el bloqueo de severidad alta.
+
+## Verificación local del runtime
+
+La suite completa del commit `ac475e3` construyó las imágenes, validó su identidad en el fixture y terminó con código 10, sin errores operativos. Las imágenes de web, gateway y Redis quedaron sin hallazgos bloqueantes. La imagen Debian de PHP tuvo 69 hallazgos bloqueantes, PostgreSQL 27 y Swagger UI uno. Conservar esa decisión del gate mientras se evalúan las correcciones.
+
+ZAP 2.17.0 generó el reporte sobre las cinco solicitudes previstas. La alerta de cookie corresponde a `XSRF-TOKEN`, que el cliente debe poder leer. El comprobador HTTP confirmó `Secure`, `HttpOnly` y `SameSite=Lax` en la cookie de sesión. La alerta media de CSP requiere validar la política en staging con el navegador, Mapbox y Reverb.
+
+El PostgreSQL parcheado usa `su-exec` para la transición de usuario del entrypoint oficial. La prueba local arrancó con un volumen inicializado por la imagen original de PostgreSQL 18.7 y conservó un registro sintético. El procedimiento de release debe construir `api`, `gateway`, `postgres` y `swagger-ui` con el mismo SHA o cargar los artefactos aprobados antes de recrearlos. Verificarlo en staging antes de adaptar la VPS del cliente.
+
+Como alternativa a los paquetes Debian que Trivy señaló sin versión corregida, se construyó PHP 8.5.13 sobre Alpine 3.24. El escaneo del candidato reportó cero hallazgos bloqueantes. La imagen conserva UID/GID 33 para el almacenamiento persistente y sus herramientas PostgreSQL produjeron y restauraron un backup de prueba que conservó el dato sintético. Dos corridas de código concurrentes aprobaron la política de frescura de Trivy y conservaron los IDs de los contenedores de desarrollo.

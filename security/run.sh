@@ -119,7 +119,17 @@ fi
 db_ready=false
 if run_tool trivy image --download-db-only --no-progress > "$reports/trivy-db.log" 2>&1 ||
    { sleep 3; run_tool trivy image --download-db-only --no-progress >> "$reports/trivy-db.log" 2>&1; }; then
-    db_ready=true
+    if timeout 30 "${compose[@]}" run --no-deps --rm -T --entrypoint /bin/cat trivy /cache/db/metadata.json \
+        > "$reports/trivy-db-meta.json" 2>> "$reports/trivy-db.log" &&
+        python3 -c 'import datetime as d, json, sys; at = d.datetime.fromisoformat(json.load(sys.stdin)["UpdatedAt"].replace("Z", "+00:00")); sys.exit(not 0 <= (d.datetime.now(d.timezone.utc) - at).total_seconds() <= 172800)' \
+        < "$reports/trivy-db-meta.json"; then
+        db_ready=true
+    else
+        record_failure 'Trivy: fecha de la base ilegible o con más de 48 horas'
+    fi
+fi
+
+if [[ "$db_ready" == true ]]; then
     if [[ "$component" != frontend ]]; then
         scan_lock composer backend composer.json composer.lock
         scan_lock npm-backend backend package.json package-lock.json

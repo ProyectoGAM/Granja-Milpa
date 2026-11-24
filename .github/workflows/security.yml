@@ -28,6 +28,8 @@ jobs:
           for component in GAM-Backend GAM-Frontend; do
             test "$(git rev-parse "HEAD:$component")" = "$(git -C "$component" rev-parse HEAD)"
           done
+      - name: Probar la política de bloqueo
+        run: python3 -B -m unittest discover -s security/tests
       - name: Ejecutar suite Docker
         run: bash security/run.sh all
       - name: Publicar resultados filtrados
